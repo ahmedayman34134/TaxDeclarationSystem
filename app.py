@@ -158,6 +158,36 @@ def create_app():
                              recent_invoices=recent_invoices,
                              chart_data=chart_data)
     
+    # إدارة المنتجات
+    @app.route('/products')
+    @login_required
+    def products_list():
+        """قائمة المنتجات"""
+        products = Product.query.all()
+        return render_template('products/list.html', products=products)
+    
+    # إدارة الفواتير
+    @app.route('/invoices')
+    @login_required
+    def invoices_list():
+        """قائمة الفواتير"""
+        invoices = Invoice.query.all()
+        return render_template('invoices/list.html', invoices=invoices)
+    
+    # التقارير
+    @app.route('/reports')
+    @login_required
+    def reports_dashboard():
+        """لوحة تحكم التقارير"""
+        return render_template('reports/dashboard.html')
+    
+    # الإعدادات
+    @app.route('/settings')
+    @login_required
+    def system_settings():
+        """إعدادات النظام"""
+        return render_template('settings.html')
+    
     with app.app_context():
         db.create_all()
         init_default_users()
