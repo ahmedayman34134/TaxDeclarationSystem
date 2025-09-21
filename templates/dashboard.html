@@ -1,34 +1,196 @@
 {% extends "base.html" %}
 
-{% block title %}لوحة التحكم{% endblock %}
+{% block title %}لوحة التحكم - نظام إدارة الإقرارات الضريبية{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-success text-center" role="alert">
-                <h1 class="display-4">
-                    <i class="fas fa-check-circle text-success"></i>
-                    مبروك! النظام يعمل بنجاح
-                </h1>
-                <p class="lead">تم نشر نظام إدارة الإقرارات الضريبية بنجاح على Railway</p>
-                <hr>
-                <p class="mb-0">
-                    <strong>Created By Mr-TITO</strong>
-                </p>
-                <p>
-                    <a href="https://wa.me/+201028893818" target="_blank" class="btn btn-success btn-sm">
-                        <i class="fab fa-whatsapp"></i> واتساب
-                    </a>
-                    <a href="https://www.facebook.com/ahmed.ayman.871106" target="_blank" class="btn btn-primary btn-sm">
-                        <i class="fab fa-facebook"></i> فيسبوك
-                    </a>
-                    <a href="https://t.me/mrtito" target="_blank" class="btn btn-info btn-sm">
-                        <i class="fab fa-telegram"></i> تليجرام
-                    </a>
-                </p>
+<div class="row">
+    <div class="col-12">
+        <h1 class="gradient-text mb-4">
+            <i class="fas fa-tachometer-alt me-3"></i>
+            لوحة التحكم
+        </h1>
+    </div>
+</div>
+
+<!-- إحصائيات سريعة -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            فواتير اليوم
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.today.invoices_count if stats else 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-file-invoice fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            مبيعات اليوم
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ "{:,.2f}".format(stats.today.total_amount) if stats else "0.00" }} ج.م
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            إجمالي المنتجات
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ stats.products_count if stats else 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-box fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            ضرائب هذا الشهر
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ "{:,.2f}".format(stats.month.vat_amount + stats.month.withholding_amount) if stats else "0.00" }} ج.م
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- الرسوم البيانية والجداول -->
+<div class="row">
+    <!-- رسم بياني للمبيعات -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">نظرة عامة على المبيعات</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center p-4">
+                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                    <h5>رسم بياني للمبيعات</h5>
+                    <p class="text-muted">سيتم عرض الرسوم البيانية هنا عند توفر البيانات</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- أحدث الفواتير -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">أحدث الفواتير</h6>
+                <a href="/invoices" class="btn btn-primary btn-sm">عرض الكل</a>
+            </div>
+            <div class="card-body">
+                {% if recent_invoices %}
+                    {% for invoice in recent_invoices %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="mr-3">
+                            <div class="icon-circle bg-primary">
+                                <i class="fas fa-file-invoice text-white"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="small text-gray-500">{{ invoice.created_at.strftime('%Y-%m-%d') }}</div>
+                            <div class="font-weight-bold">{{ invoice.invoice_number }}</div>
+                            <div class="text-gray-800">{{ invoice.customer_name }}</div>
+                            <div class="text-success">{{ "{:,.2f}".format(invoice.total_amount) }} ج.م</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-gray-500">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>لا توجد فواتير حتى الآن</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- معلومات إضافية -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>
+                    معلومات النظام
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="alert alert-success">
+                            <h5><i class="fas fa-check-circle"></i> النظام يعمل بكفاءة</h5>
+                            <p class="mb-0">تم نشر نظام إدارة الإقرارات الضريبية بنجاح على Railway</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-code"></i> Created By Mr-TITO</h5>
+                            <p class="mb-2">للدعم الفني والاستفسارات:</p>
+                            <a href="https://wa.me/+201028893818" target="_blank" class="btn btn-success btn-sm me-2">
+                                <i class="fab fa-whatsapp"></i> واتساب
+                            </a>
+                            <a href="https://www.facebook.com/ahmed.ayman.871106" target="_blank" class="btn btn-primary btn-sm me-2">
+                                <i class="fab fa-facebook"></i> فيسبوك
+                            </a>
+                            <a href="https://t.me/mrtito" target="_blank" class="btn btn-info btn-sm">
+                                <i class="fab fa-telegram"></i> تليجرام
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// تحديث الوقت الحالي
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard loaded successfully!');
+});
+</script>
 {% endblock %}
