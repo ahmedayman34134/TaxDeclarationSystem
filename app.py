@@ -72,6 +72,20 @@ def create_app():
         return 0
     
     # إنشاء الجداول وتهيئة البيانات الأساسية
+    # معالج الأخطاء
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        return render_template('errors/500.html'), 500
+
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        return render_template('errors/403.html'), 403
+    
     with app.app_context():
         db.create_all()
         init_default_users()
@@ -557,19 +571,8 @@ def system_settings():
     
     return render_template('settings.html', form=form)
 
-# معالج الأخطاء
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('errors/404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    db.session.rollback()
-    return render_template('errors/500.html'), 500
-
-@app.errorhandler(403)
-def forbidden_error(error):
-    return render_template('errors/403.html'), 403
+# إنشاء التطبيق
+app = create_app()
 
 if __name__ == '__main__':
     # تكوين البورت للإنتاج (Railway) أو التطوير
