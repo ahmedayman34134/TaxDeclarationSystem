@@ -86,6 +86,78 @@ def create_app():
     def forbidden_error(error):
         return render_template('errors/403.html'), 403
     
+    # الصفحات الرئيسية
+    @app.route('/')
+    def index():
+        """الصفحة الرئيسية"""
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        return redirect(url_for('auth.login'))
+
+    @app.route('/dashboard')
+    @login_required
+    def dashboard():
+        """لوحة التحكم الرئيسية"""
+        # إحصائيات سريعة
+        today = datetime.now().date()
+        current_month_start = today.replace(day=1)
+        
+        # إحصائيات اليوم
+        today_invoices = Invoice.query.filter(
+            Invoice.invoice_date == today
+        ).all()
+        
+        today_total = sum(invoice.total_amount for invoice in today_invoices)
+        today_vat = sum(invoice.vat_amount for invoice in today_invoices)
+        today_withholding = sum(invoice.withholding_amount for invoice in today_invoices)
+        
+        # إحصائيات الشهر الحالي
+        month_invoices = Invoice.query.filter(
+            Invoice.invoice_date >= current_month_start
+        ).all()
+        
+        month_total = sum(invoice.total_amount for invoice in month_invoices)
+        month_vat = sum(invoice.vat_amount for invoice in month_invoices)
+        month_withholding = sum(invoice.withholding_amount for invoice in month_invoices)
+        
+        # أحدث الفواتير
+        recent_invoices = Invoice.query.order_by(Invoice.created_at.desc()).limit(5).all()
+        
+        # إحصائيات المنتجات
+        total_products = Product.query.count()
+        
+        # بيانات الرسم البياني (آخر 7 أيام)
+        chart_data = []
+        for i in range(6, -1, -1):
+            date = today - timedelta(days=i)
+            day_invoices = Invoice.query.filter(Invoice.invoice_date == date).all()
+            day_total = sum(invoice.total_amount for invoice in day_invoices)
+            chart_data.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'total': float(day_total)
+            })
+        
+        stats = {
+            'today': {
+                'invoices_count': len(today_invoices),
+                'total_amount': today_total,
+                'vat_amount': today_vat,
+                'withholding_amount': today_withholding
+            },
+            'month': {
+                'invoices_count': len(month_invoices),
+                'total_amount': month_total,
+                'vat_amount': month_vat,
+                'withholding_amount': month_withholding
+            },
+            'products_count': total_products
+        }
+        
+        return render_template('dashboard.html', 
+                             stats=stats, 
+                             recent_invoices=recent_invoices,
+                             chart_data=chart_data)
+    
     with app.app_context():
         db.create_all()
         init_default_users()
@@ -115,17 +187,11 @@ def init_default_settings():
 # إنشاء التطبيق
 app = create_app()
 
-# الصفحات الرئيسية
-@app.route('/')
-def index():
-    """الصفحة الرئيسية"""
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('auth.login'))
-
-@app.route('/dashboard')
+# باقي الـ routes (المنتجات، الفواتير، إلخ)
+@app.route('/products')
 @login_required
-def dashboard():
+@permission_required('view_product')
+def products_list():
     """لوحة التحكم الرئيسية"""
     # إحصائيات سريعة
     today = datetime.now().date()
