@@ -86,6 +86,14 @@ def create_app():
     def forbidden_error(error):
         return render_template('errors/403.html'), 403
     
+    # الصفحة الرئيسية
+    @app.route('/')
+    def index():
+        """الصفحة الرئيسية"""
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        return redirect(url_for('auth.login'))
+    
     with app.app_context():
         db.create_all()
         init_default_users()
@@ -114,14 +122,6 @@ def init_default_settings():
 
 # إنشاء التطبيق
 app = create_app()
-
-# الصفحات الرئيسية
-@app.route('/')
-def index():
-    """الصفحة الرئيسية"""
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('auth.login'))
 
 @app.route('/dashboard')
 @login_required
