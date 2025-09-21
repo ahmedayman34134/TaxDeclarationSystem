@@ -74,7 +74,7 @@
                 
                 {% if current_user.has_permission('view_invoice') %}
                 <li class="nav-item">
-                    <a class="nav-link {{ 'active' if request.endpoint and 'invoice' in request.endpoint }}" href="{{ url_for('invoices_list') }}">
+                    <a class="nav-link {{ 'active' if request.endpoint and 'invoice' in request.endpoint }}" href="/invoices">
                         <i class="fas fa-file-invoice"></i>
                         الفواتير
                     </a>
@@ -83,7 +83,7 @@
                 
                 {% if current_user.has_permission('view_product') %}
                 <li class="nav-item">
-                    <a class="nav-link {{ 'active' if request.endpoint and 'product' in request.endpoint }}" href="{{ url_for('products_list') }}">
+                    <a class="nav-link {{ 'active' if request.endpoint and 'product' in request.endpoint }}" href="/products">
                         <i class="fas fa-box"></i>
                         المنتجات
                     </a>
