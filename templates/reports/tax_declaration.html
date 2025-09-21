@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}الإقرار الضريبي {{ current_year }} - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('reports.reports_dashboard') }}">التقارير</a></li>
+                <li class="breadcrumb-item active">الإقرار الضريبي {{ current_year }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-file-contract me-2"></i>
+                    الإقرار الضريبي لسنة {{ current_year }}
+                </h4>
+                <div class="btn-group">
+                    <a href="{{ url_for('reports.tax_declaration', export='pdf') }}" class="btn btn-danger" title="تصدير PDF احترافي مع دعم العربية الكامل">
+                        <i class="fas fa-file-pdf me-2"></i>تصدير PDF
+                    </a>
+                    <a href="{{ url_for('reports.tax_declaration', export='excel') }}" class="btn btn-success">
+                        <i class="fas fa-file-excel me-2"></i>تصدير Excel
+                    </a>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="fas fa-print me-2"></i>طباعة
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- معلومات الشركة -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">بيانات المنشأة</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>اسم المنشأة:</strong> {{ company_name }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>الرقم الضريبي:</strong> {{ tax_number }}
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <strong>السنة الضريبية:</strong> {{ current_year }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>تاريخ الإعداد:</strong> {{ current_date.strftime('%Y/%m/%d') }}
+                                    </div>
+                                </div>
+                                {% if company_address %}
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <strong>العنوان:</strong> {{ company_address }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ملخص الإقرار -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-percentage me-2"></i>
+                                    ضريبة القيمة المضافة (14%)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td>المبيعات الخاضعة للضريبة (14%):</td>
+                                        <td class="text-end"><strong>{{ "{:,.2f}".format(total_vat_sales) }} جنيه</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td>ضريبة القيمة المضافة (14%):</td>
+                                        <td class="text-end"><strong>{{ "{:,.2f}".format(total_vat_amount) }} جنيه</strong></td>
+                                    </tr>
+                                    <tr class="border-top">
+                                        <td><strong>إجمالي شامل الضريبة:</strong></td>
+                                        <td class="text-end"><strong class="text-success">{{ "{:,.2f}".format(total_vat_sales + total_vat_amount) }} جنيه</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-cut me-2"></i>
+                                    ضريبة الخصم والإضافة (5%)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td>المبيعات الخاضعة للضريبة (5%):</td>
+                                        <td class="text-end"><strong>{{ "{:,.2f}".format(total_withholding_sales) }} جنيه</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td>ضريبة الخصم والإضافة (5%):</td>
+                                        <td class="text-end"><strong>{{ "{:,.2f}".format(total_withholding_amount) }} جنيه</strong></td>
+                                    </tr>
+                                    <tr class="border-top">
+                                        <td><strong>إجمالي شامل الضريبة:</strong></td>
+                                        <td class="text-end"><strong class="text-warning">{{ "{:,.2f}".format(total_withholding_sales + total_withholding_amount) }} جنيه</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الإجماليات النهائية -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h6 class="card-title text-center">الإجماليات النهائية للسنة الضريبية {{ current_year }}</h6>
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <h4>{{ "{:,.0f}".format(total_sales) }}</h4>
+                                        <p class="mb-0">إجمالي المبيعات</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h4>{{ "{:,.0f}".format(total_vat_amount) }}</h4>
+                                        <p class="mb-0">ضريبة القيمة المضافة</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h4>{{ "{:,.0f}".format(total_withholding_amount) }}</h4>
+                                        <p class="mb-0">ضريبة الخصم والإضافة</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h4>{{ "{:,.0f}".format(total_vat_amount + total_withholding_amount) }}</h4>
+                                        <p class="mb-0">إجمالي الضرائب</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- البيانات الشهرية -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            التفصيل الشهري لسنة {{ current_year }}
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>الشهر</th>
+                                        <th>مبيعات خاضعة ق.م.م (14%)</th>
+                                        <th>ضريبة ق.م.م</th>
+                                        <th>مبيعات خاضعة خ.إ (5%)</th>
+                                        <th>ضريبة خ.إ</th>
+                                        <th>إجمالي المبيعات</th>
+                                        <th>إجمالي الضرائب</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for month_data in monthly_data %}
+                                    <tr>
+                                        <td><strong>{{ month_data.month_name }}</strong></td>
+                                        <td>{{ "{:,.2f}".format(month_data.vat_sales) }} جنيه</td>
+                                        <td>{{ "{:,.2f}".format(month_data.vat_amount) }} جنيه</td>
+                                        <td>{{ "{:,.2f}".format(month_data.withholding_sales) }} جنيه</td>
+                                        <td>{{ "{:,.2f}".format(month_data.withholding_amount) }} جنيه</td>
+                                        <td>{{ "{:,.2f}".format(month_data.total_sales) }} جنيه</td>
+                                        <td><strong>{{ "{:,.2f}".format(month_data.vat_amount + month_data.withholding_amount) }} جنيه</strong></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-dark">
+                                    <tr>
+                                        <th>الإجماليات</th>
+                                        <th>{{ "{:,.2f}".format(total_vat_sales) }} جنيه</th>
+                                        <th>{{ "{:,.2f}".format(total_vat_amount) }} جنيه</th>
+                                        <th>{{ "{:,.2f}".format(total_withholding_sales) }} جنيه</th>
+                                        <th>{{ "{:,.2f}".format(total_withholding_amount) }} جنيه</th>
+                                        <th>{{ "{:,.2f}".format(total_sales) }} جنيه</th>
+                                        <th>{{ "{:,.2f}".format(total_vat_amount + total_withholding_amount) }} جنيه</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- توقيع وختم -->
+                <div class="row mt-5">
+                    <div class="col-md-6">
+                        <div class="border p-4 text-center">
+                            <h6>توقيع المحاسب</h6>
+                            <div style="height: 80px;"></div>
+                            <hr>
+                            <p class="mb-0">الاسم: ________________</p>
+                            <p class="mb-0">التاريخ: {{ current_date.strftime('%Y/%m/%d') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border p-4 text-center">
+                            <h6>ختم الشركة</h6>
+                            <div style="height: 80px;"></div>
+                            <hr>
+                            <p class="mb-0">ختم وتوقيع الشركة</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportToPDF() {
+    alert('تصدير PDF قيد التطوير - سيتم إضافته قريباً');
+}
+
+// تحسين الطباعة
+window.addEventListener('beforeprint', function() {
+    document.querySelectorAll('.btn, .breadcrumb').forEach(el => {
+        el.style.display = 'none';
+    });
+});
+
+window.addEventListener('afterprint', function() {
+    document.querySelectorAll('.btn, .breadcrumb').forEach(el => {
+        el.style.display = '';
+    });
+});
+</script>
+
+<style>
+@media print {
+    .btn, .breadcrumb {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+    
+    body {
+        font-size: 12px;
+    }
+}
+</style>
+{% endblock %}

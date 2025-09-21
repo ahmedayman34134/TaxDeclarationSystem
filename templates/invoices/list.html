@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block title %}قائمة الفواتير - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="gradient-text">
+                <i class="fas fa-file-invoice me-3"></i>
+                إدارة الفواتير
+            </h1>
+            {% if current_user.has_permission('create_invoice') %}
+            <a href="{{ url_for('create_invoice') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                إنشاء فاتورة جديدة
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- شريط البحث والفلاتر -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">البحث</label>
+                        <input type="text" name="query" class="form-control" 
+                               placeholder="رقم الفاتورة أو اسم العميل..." 
+                               value="{{ request.args.get('query', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">من تاريخ</label>
+                        <input type="date" name="date_from" class="form-control" 
+                               value="{{ request.args.get('date_from', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">إلى تاريخ</label>
+                        <input type="date" name="date_to" class="form-control" 
+                               value="{{ request.args.get('date_to', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">أقل مبلغ</label>
+                        <input type="number" name="min_amount" class="form-control" 
+                               placeholder="0.00" step="0.01"
+                               value="{{ request.args.get('min_amount', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">أكبر مبلغ</label>
+                        <input type="number" name="max_amount" class="form-control" 
+                               placeholder="0.00" step="0.01"
+                               value="{{ request.args.get('max_amount', '') }}">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="include_cancelled" 
+                                   id="includeCancelled" {{ 'checked' if request.args.get('include_cancelled') }}>
+                            <label class="form-check-label" for="includeCancelled">
+                                تضمين الفواتير المُلغاة
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- إحصائيات سريعة -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="stats-number">{{ invoices.total }}</div>
+            <div class="stats-label">إجمالي الفواتير</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card success">
+            <div class="stats-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="stats-number">
+                {% set total_amount = invoices.items | selectattr('is_cancelled', 'equalto', false) | sum(attribute='total_amount') %}
+                {{ "{:,.0f}".format(total_amount) }}
+            </div>
+            <div class="stats-label">إجمالي المبيعات (جنيه)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card warning">
+            <div class="stats-icon">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stats-number">
+                {% set total_vat = invoices.items | selectattr('is_cancelled', 'equalto', false) | sum(attribute='vat_amount') %}
+                {{ "{:,.0f}".format(total_vat) }}
+            </div>
+            <div class="stats-label">ضريبة ق.م.م (جنيه)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card danger">
+            <div class="stats-icon">
+                <i class="fas fa-cut"></i>
+            </div>
+            <div class="stats-number">
+                {% set total_withholding = invoices.items | selectattr('is_cancelled', 'equalto', false) | sum(attribute='withholding_amount') %}
+                {{ "{:,.0f}".format(total_withholding) }}
+            </div>
+            <div class="stats-label">ضريبة خ.إ (جنيه)</div>
+        </div>
+    </div>
+</div>
+
+<!-- قائمة الفواتير -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fas fa-list me-2"></i>
+                    قائمة الفواتير
+                </span>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-1"></i>Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf me-1"></i>PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if invoices.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <input type="checkbox" class="form-check-input" id="selectAll">
+                                </th>
+                                <th>رقم الفاتورة</th>
+                                <th>العميل</th>
+                                <th>تاريخ الفاتورة</th>
+                                <th>المبلغ قبل الضريبة</th>
+                                <th>ضريبة ق.م.م</th>
+                                <th>ضريبة خ.إ</th>
+                                <th>المبلغ الإجمالي</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in invoices.items %}
+                            <tr class="{{ 'table-secondary' if invoice.is_cancelled }}">
+                                <td>
+                                    <input type="checkbox" class="form-check-input item-checkbox" 
+                                           value="{{ invoice.id }}">
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" 
+                                       class="text-decoration-none fw-bold">
+                                        {{ invoice.invoice_number }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="fw-bold">{{ invoice.customer_name }}</div>
+                                        {% if invoice.customer_tax_id %}
+                                        <small class="text-muted">{{ invoice.customer_tax_id }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ invoice.invoice_date.strftime('%Y/%m/%d') }}</td>
+                                <td>{{ "{:,.2f}".format(invoice.subtotal) }} جنيه</td>
+                                <td>
+                                    {% if invoice.vat_amount > 0 %}
+                                        <span class="text-primary fw-bold">{{ "{:,.2f}".format(invoice.vat_amount) }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if invoice.withholding_amount > 0 %}
+                                        <span class="text-warning fw-bold">{{ "{:,.2f}".format(invoice.withholding_amount) }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">{{ "{:,.2f}".format(invoice.total_amount) }} جنيه</span>
+                                </td>
+                                <td>
+                                    {% if invoice.is_cancelled %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>ملغاة
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>نشطة
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" 
+                                           class="btn btn-sm btn-outline-info" title="عرض">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if not invoice.is_cancelled and current_user.has_permission('edit_invoice') %}
+                                        <a href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="تعديل">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if not invoice.is_cancelled and current_user.has_permission('delete_invoice') %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger cancel-invoice-btn" 
+                                                data-invoice-id="{{ invoice.id }}" 
+                                                data-invoice-number="{{ invoice.invoice_number }}"
+                                                title="إلغاء">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary print-invoice-btn" 
+                                                data-invoice-id="{{ invoice.id }}" title="طباعة">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-invoice fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">لا توجد فواتير</h4>
+                    <p class="text-muted mb-4">لم يتم العثور على أي فواتير تطابق معايير البحث</p>
+                    {% if current_user.has_permission('create_invoice') %}
+                    <a href="{{ url_for('create_invoice') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>إنشاء فاتورة جديدة
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- التنقل بين الصفحات -->
+{% if invoices.pages > 1 %}
+<div class="row mt-4">
+    <div class="col-12">
+        <nav aria-label="تنقل الصفحات">
+            <ul class="pagination justify-content-center">
+                {% if invoices.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('invoices_list', page=invoices.prev_num, **request.args) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in invoices.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != invoices.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('invoices_list', page=page_num, **request.args) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if invoices.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('invoices_list', page=invoices.next_num, **request.args) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+
+<!-- الإجراءات المتعددة -->
+<div class="bulk-actions" style="display: none;">
+    <div class="card border-primary">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fas fa-check-square me-2"></i>
+                    تم تحديد <span id="selectedCount">0</span> فاتورة
+                </span>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportSelected()">
+                        <i class="fas fa-download me-1"></i>تصدير المحدد
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="printSelected()">
+                        <i class="fas fa-print me-1"></i>طباعة المحدد
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج تأكيد الإلغاء -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد إلغاء الفاتورة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من إلغاء الفاتورة "<span id="invoiceNumber"></span>"؟</p>
+                <p class="text-danger small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    لا يمكن التراجع عن هذا الإجراء وستصبح الفاتورة ملغاة نهائياً
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" id="cancelForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">إلغاء الفاتورة</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// إلغاء الفاتورة
+function cancelInvoice(invoiceId, invoiceNumber) {
+    document.getElementById('invoiceNumber').textContent = invoiceNumber;
+    document.getElementById('cancelForm').action = `/invoices/${invoiceId}/cancel`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    modal.show();
+}
+
+// طباعة الفاتورة
+function printInvoice(invoiceId) {
+    window.open(`/invoices/${invoiceId}?print=1`, '_blank');
+}
+
+// إضافة event listeners للأزرار
+document.addEventListener('DOMContentLoaded', function() {
+    // أزرار الإلغاء
+    document.querySelectorAll('.cancel-invoice-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const invoiceId = this.getAttribute('data-invoice-id');
+            const invoiceNumber = this.getAttribute('data-invoice-number');
+            cancelInvoice(invoiceId, invoiceNumber);
+        });
+    });
+    
+    // أزرار الطباعة
+    document.querySelectorAll('.print-invoice-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const invoiceId = this.getAttribute('data-invoice-id');
+            printInvoice(invoiceId);
+        });
+    });
+});
+
+// تصدير إلى Excel
+function exportToExcel() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'excel');
+    window.location.href = '/invoices?' + params.toString();
+}
+
+// تصدير إلى PDF
+function exportToPDF() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'pdf');
+    window.location.href = '/invoices?' + params.toString();
+}
+
+// تحديث عدد المحدد
+function updateSelectedCount() {
+    const checkedItems = document.querySelectorAll('.item-checkbox:checked');
+    const count = checkedItems.length;
+    document.getElementById('selectedCount').textContent = count;
+    
+    const bulkActions = document.querySelector('.bulk-actions');
+    bulkActions.style.display = count > 0 ? 'block' : 'none';
+}
+
+// تهيئة التحديد المتعدد
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            itemCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+    }
+    
+    itemCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+            selectAll.checked = checkedCount === itemCheckboxes.length;
+            selectAll.indeterminate = checkedCount > 0 && checkedCount < itemCheckboxes.length;
+            updateSelectedCount();
+        });
+    });
+    
+    // تحديث checkbox تضمين المُلغاة عند التغيير
+    const includeCancelled = document.getElementById('includeCancelled');
+    if (includeCancelled) {
+        includeCancelled.addEventListener('change', function() {
+            const form = this.closest('form');
+            form.submit();
+        });
+    }
+});
+
+// البحث التلقائي
+let searchTimeout;
+document.querySelector('input[name="query"]').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        if (this.value.length >= 2 || this.value.length === 0) {
+            this.form.submit();
+        }
+    }, 500);
+});
+</script>
+{% endblock %}

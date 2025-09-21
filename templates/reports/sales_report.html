@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}تقرير المبيعات الصافية - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('reports.reports_dashboard') }}">التقارير</a></li>
+                <li class="breadcrumb-item active">تقرير المبيعات الصافية</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    تقرير المبيعات الصافية (بدون ضرائب)
+                </h4>
+                <div class="btn-group">
+                    <a href="{{ url_for('reports.sales_report', export='pdf') }}" class="btn btn-danger">
+                        <i class="fas fa-file-pdf me-2"></i>تصدير PDF
+                    </a>
+                    <a href="{{ url_for('reports.sales_report', export='excel') }}" class="btn btn-success">
+                        <i class="fas fa-file-excel me-2"></i>تصدير Excel
+                    </a>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="fas fa-print me-2"></i>طباعة
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- معلومات التقرير -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">معلومات التقرير</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td><strong>الفترة:</strong></td>
+                                        <td>{{ period_text }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>تاريخ الإنشاء:</strong></td>
+                                        <td>{{ current_date.strftime('%Y/%m/%d %H:%M') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>عدد الفواتير:</strong></td>
+                                        <td>{{ invoices|length }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">إجماليات المبيعات</h6>
+                                <table class="table table-sm table-borderless text-white">
+                                    <tr>
+                                        <td><strong>إجمالي المبيعات (قبل الضريبة):</strong></td>
+                                        <td><strong>{{ "{:,.2f}".format(total_sales) }} جنيه</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>إجمالي الضرائب:</strong></td>
+                                        <td><strong>{{ "{:,.2f}".format(total_taxes) }} جنيه</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>إجمالي الفواتير (شامل الضريبة):</strong></td>
+                                        <td><strong>{{ "{:,.2f}".format(total_sales + total_taxes) }} جنيه</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- جدول الفواتير -->
+                {% if invoices %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>رقم الفاتورة</th>
+                                <th>التاريخ</th>
+                                <th>العميل</th>
+                                <th>المبيعات الصافية</th>
+                                <th>ض.ق.م</th>
+                                <th>ض.خ.إ</th>
+                                <th>إجمالي الضرائب</th>
+                                <th>الإجمالي النهائي</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in invoices %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="text-decoration-none">
+                                        {{ invoice.invoice_number }}
+                                    </a>
+                                </td>
+                                <td>{{ invoice.invoice_date.strftime('%Y/%m/%d') }}</td>
+                                <td>{{ invoice.customer_name }}</td>
+                                <td><strong>{{ "{:,.2f}".format(invoice.subtotal) }} جنيه</strong></td>
+                                <td>{{ "{:,.2f}".format(invoice.vat_amount) }} جنيه</td>
+                                <td>{{ "{:,.2f}".format(invoice.withholding_amount) }} جنيه</td>
+                                <td>{{ "{:,.2f}".format(invoice.vat_amount + invoice.withholding_amount) }} جنيه</td>
+                                <td><strong>{{ "{:,.2f}".format(invoice.total_amount) }} جنيه</strong></td>
+                                <td>
+                                    {% if invoice.is_cancelled %}
+                                        <span class="badge bg-danger">ملغاة</span>
+                                    {% else %}
+                                        <span class="badge bg-success">نشطة</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <th colspan="3">الإجماليات</th>
+                                <th>{{ "{:,.2f}".format(total_sales) }} جنيه</th>
+                                <th>{{ "{:,.2f}".format(total_vat) }} جنيه</th>
+                                <th>{{ "{:,.2f}".format(total_withholding) }} جنيه</th>
+                                <th>{{ "{:,.2f}".format(total_taxes) }} جنيه</th>
+                                <th>{{ "{:,.2f}".format(total_sales + total_taxes) }} جنيه</th>
+                                <th>-</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-invoice fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">لا توجد فواتير مبيعات</h4>
+                    <p class="text-muted mb-4">لا توجد فواتير في الفترة المحددة</p>
+                    <a href="{{ url_for('create_invoice') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>إنشاء فاتورة جديدة
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحسين الطباعة
+window.addEventListener('beforeprint', function() {
+    document.querySelectorAll('.btn, .breadcrumb').forEach(el => {
+        el.style.display = 'none';
+    });
+});
+
+window.addEventListener('afterprint', function() {
+    document.querySelectorAll('.btn, .breadcrumb').forEach(el => {
+        el.style.display = '';
+    });
+});
+</script>
+
+<style>
+@media print {
+    .btn, .breadcrumb {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+}
+</style>
+{% endblock %}

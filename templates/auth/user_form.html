@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('auth.users_list') }}">المستخدمين</a></li>
+                <li class="breadcrumb-item active">{{ title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    {{ title }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                {{ form.username.label(class="form-label required") }}
+                                {{ form.username(class="form-control form-control-lg", placeholder="أدخل اسم المستخدم") }}
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.username.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                {{ form.email.label(class="form-label required") }}
+                                {{ form.email(class="form-control form-control-lg", placeholder="أدخل البريد الإلكتروني") }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if not user %}
+                    <div class="mb-4">
+                        {{ form.password.label(class="form-label required") }}
+                        <div class="input-group">
+                            {{ form.password(class="form-control form-control-lg", placeholder="أدخل كلمة المرور", id="password") }}
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.password.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <small class="text-muted">
+                                كلمة المرور يجب أن تكون 6 أحرف على الأقل
+                            </small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                {{ form.role.label(class="form-label required") }}
+                                {{ form.role(class="form-select form-select-lg") }}
+                                {% if form.role.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.role.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <small class="text-muted">
+                                        <strong>مدير:</strong> صلاحيات كاملة<br>
+                                        <strong>محاسب:</strong> إدارة الفواتير والتقارير<br>
+                                        <strong>مستخدم:</strong> عرض وإنشاء الفواتير فقط
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label">حالة المستخدم</label>
+                                <div class="form-check form-switch mt-2">
+                                    {{ form.is_active(class="form-check-input", role="switch") }}
+                                    {{ form.is_active.label(class="form-check-label") }}
+                                </div>
+                                <div class="form-text">
+                                    <small class="text-muted">
+                                        المستخدمين غير النشطين لا يمكنهم تسجيل الدخول
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- معاينة الصلاحيات -->
+                    <div class="mb-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    معاينة الصلاحيات
+                                </h6>
+                                <div id="permissionsPreview">
+                                    <div class="text-muted">اختر دور المستخدم لعرض الصلاحيات</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if user %}
+                    <div class="mb-4">
+                        <div class="card bg-info bg-opacity-10 border-info">
+                            <div class="card-body">
+                                <h6 class="card-title text-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    معلومات إضافية
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">تاريخ الإنشاء</small>
+                                        <div class="fw-bold">{{ user.created_at.strftime('%Y/%m/%d %H:%M') }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">آخر تسجيل دخول</small>
+                                        <div class="fw-bold">
+                                            {% if user.last_login %}
+                                                {{ user.last_login.strftime('%Y/%m/%d %H:%M') }}
+                                            {% else %}
+                                                لم يسجل دخول بعد
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('auth.users_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {{ 'تحديث المستخدم' if user else 'حفظ المستخدم' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    const permissionsPreview = document.getElementById('permissionsPreview');
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordField = document.getElementById('password');
+    
+    // صلاحيات كل دور
+    const rolePermissions = {
+        'admin': [
+            'إدارة كاملة للنظام',
+            'إنشاء وتعديل وحذف الفواتير',
+            'إدارة المنتجات',
+            'إدارة المستخدمين',
+            'عرض وتصدير التقارير',
+            'إدارة النسخ الاحتياطي',
+            'تعديل إعدادات النظام'
+        ],
+        'accountant': [
+            'إنشاء وتعديل الفواتير',
+            'إدارة المنتجات',
+            'عرض وتصدير التقارير',
+            'عرض الإحصائيات'
+        ],
+        'user': [
+            'إنشاء الفواتير',
+            'عرض الفواتير',
+            'عرض المنتجات'
+        ]
+    };
+    
+    // تحديث معاينة الصلاحيات
+    function updatePermissionsPreview() {
+        const selectedRole = roleSelect.value;
+        const permissions = rolePermissions[selectedRole];
+        
+        if (permissions) {
+            let html = '<ul class="list-unstyled mb-0">';
+            permissions.forEach(permission => {
+                html += `<li><i class="fas fa-check text-success me-2"></i>${permission}</li>`;
+            });
+            html += '</ul>';
+            permissionsPreview.innerHTML = html;
+        } else {
+            permissionsPreview.innerHTML = '<div class="text-muted">اختر دور المستخدم لعرض الصلاحيات</div>';
+        }
+    }
+    
+    // مراقبة تغيير الدور
+    if (roleSelect) {
+        roleSelect.addEventListener('change', updatePermissionsPreview);
+        updatePermissionsPreview(); // تحديث أولي
+    }
+    
+    // إظهار/إخفاء كلمة المرور
+    if (togglePassword && passwordField) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordField.setAttribute('type', type);
+            
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+    }
+    
+    // التحقق من صحة النموذج
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+
+<style>
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.form-control-lg, .form-select-lg {
+    border-radius: 0.75rem;
+}
+
+.card {
+    border-radius: 1rem;
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+}
+</style>
+{% endblock %}

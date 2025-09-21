@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}النسخ الاحتياطي - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="gradient-text mb-4">
+            <i class="fas fa-database me-3"></i>
+            إدارة النسخ الاحتياطي
+        </h1>
+    </div>
+</div>
+
+<!-- إحصائيات النسخ الاحتياطي -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-archive"></i>
+            </div>
+            <div class="stats-number">{{ total_backups }}</div>
+            <div class="stats-label">إجمالي النسخ</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card success">
+            <div class="stats-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stats-number">{{ successful_backups }}</div>
+            <div class="stats-label">نسخ ناجحة</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card danger">
+            <div class="stats-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stats-number">{{ failed_backups }}</div>
+            <div class="stats-label">نسخ فاشلة</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card warning">
+            <div class="stats-icon">
+                <i class="fas fa-hdd"></i>
+            </div>
+            <div class="stats-number">{{ "%.1f"|format(db_size / 1024 / 1024) }}</div>
+            <div class="stats-label">حجم قاعدة البيانات (MB)</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- إجراءات النسخ الاحتياطي -->
+    <div class="col-xl-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-plus me-2"></i>
+                إنشاء نسخة احتياطية جديدة
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('backup.create_backup') }}" class="btn btn-primary w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fas fa-plus fa-2x mb-2"></i>
+                            <span>نسخة احتياطية يدوية</span>
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('backup.restore_backup') }}" class="btn btn-success w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fas fa-upload fa-2x mb-2"></i>
+                            <span>استعادة نسخة احتياطية</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- إعدادات النسخ الاحتياطي التلقائي -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cog me-2"></i>
+                إعدادات النسخ الاحتياطي التلقائي
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('backup.update_backup_settings') }}">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="auto_backup_enabled" 
+                                   id="autoBackupEnabled" {{ 'checked' if auto_backup_enabled }}>
+                            <label class="form-check-label" for="autoBackupEnabled">
+                                تفعيل النسخ الاحتياطي التلقائي
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">تكرار النسخ الاحتياطي</label>
+                        <select name="backup_frequency" class="form-select">
+                            <option value="daily" {{ 'selected' if backup_frequency == 'daily' }}>يومي</option>
+                            <option value="weekly" {{ 'selected' if backup_frequency == 'weekly' }}>أسبوعي</option>
+                            <option value="monthly" {{ 'selected' if backup_frequency == 'monthly' }}>شهري</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ الإعدادات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- آخر النسخ الاحتياطية -->
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fas fa-history me-2"></i>
+                    آخر النسخ الاحتياطية
+                </span>
+                <a href="#" class="btn btn-sm btn-outline-primary">
+                    عرض الكل
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_backups %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>الحالة</th>
+                                <th>الحجم</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in recent_backups %}
+                            <tr>
+                                <td>{{ backup.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
+                                <td>
+                                    {% if backup.backup_type == 'manual' %}
+                                        <span class="badge bg-primary">يدوي</span>
+                                    {% else %}
+                                        <span class="badge bg-info">تلقائي</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if backup.status == 'success' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>نجح
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>فشل
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if backup.file_size %}
+                                        {{ "%.1f"|format(backup.file_size / 1024 / 1024) }} MB
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if backup.status == 'success' %}
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('backup.download_backup', backup_id=backup.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="تحميل">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-backup-btn" 
+                                                data-backup-id="{{ backup.id }}" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-archive fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">لا توجد نسخ احتياطية حتى الآن</p>
+                    <a href="{{ url_for('backup.create_backup') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>إنشاء نسخة احتياطية
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- معلومات مهمة -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5 class="alert-heading">
+                <i class="fas fa-info-circle me-2"></i>
+                معلومات مهمة حول النسخ الاحتياطي
+            </h5>
+            <ul class="mb-0">
+                <li><strong>النسخ التلقائي:</strong> يتم تشغيله في الخلفية حسب الجدولة المحددة</li>
+                <li><strong>أنواع النسخ:</strong> نسخة كاملة تشمل قاعدة البيانات والملفات</li>
+                <li><strong>الأمان:</strong> يتم ضغط النسخ وحفظها بشكل آمن</li>
+                <li><strong>الاستعادة:</strong> يمكن استعادة النسخ في أي وقت مع إمكانية الدمج</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج تأكيد الحذف -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد حذف النسخة الاحتياطية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف هذه النسخة الاحتياطية؟</p>
+                <p class="text-danger small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    لا يمكن التراجع عن هذا الإجراء
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" id="deleteForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteBackup(backupId) {
+    document.getElementById('deleteForm').action = `/backup/delete/${backupId}`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// إضافة event listeners للأزرار
+document.addEventListener('DOMContentLoaded', function() {
+    // أزرار حذف النسخ الاحتياطية
+    document.querySelectorAll('.delete-backup-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const backupId = this.getAttribute('data-backup-id');
+            deleteBackup(backupId);
+        });
+    });
+});
+</script>
+{% endblock %}

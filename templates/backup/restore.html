@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}استعادة نسخة احتياطية - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('backup.backup_dashboard') }}">النسخ الاحتياطي</a></li>
+                <li class="breadcrumb-item active">استعادة نسخة احتياطية</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>
+                    استعادة نسخة احتياطية
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- تحذير مهم -->
+                <div class="alert alert-warning">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        تحذير مهم!
+                    </h5>
+                    <p class="mb-0">
+                        استعادة النسخة الاحتياطية قد تؤثر على البيانات الحالية. 
+                        يُنصح بإنشاء نسخة احتياطية من البيانات الحالية قبل المتابعة.
+                    </p>
+                </div>
+
+                <form method="POST" class="needs-validation" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-4">
+                        {{ form.backup_file.label(class="form-label required") }}
+                        {{ form.backup_file(class="form-select form-select-lg") }}
+                        {% if form.backup_file.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.backup_file.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <small class="text-muted">
+                                اختر ملف النسخة الاحتياطية المراد استعادتها
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.restore_type.label(class="form-label required") }}
+                        {{ form.restore_type(class="form-select form-select-lg") }}
+                        {% if form.restore_type.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.restore_type.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <small class="text-muted">
+                                <strong>استعادة كاملة:</strong> استبدال جميع البيانات الحالية<br>
+                                <strong>البيانات فقط:</strong> استعادة البيانات مع الاحتفاظ بالهيكل<br>
+                                <strong>دمج:</strong> دمج البيانات مع البيانات الحالية
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.confirm_restore(class="form-check-input", required=True) }}
+                            {{ form.confirm_restore.label(class="form-check-label text-danger") }}
+                        </div>
+                        {% if form.confirm_restore.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.confirm_restore.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('backup.backup_dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-danger" id="restoreBtn" disabled>
+                            <i class="fas fa-upload me-2"></i>
+                            استعادة النسخة الاحتياطية
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- النسخ الاحتياطية المتاحة -->
+{% if backups %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-archive me-2"></i>
+                النسخ الاحتياطية المتاحة
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>اسم الملف</th>
+                                <th>التاريخ</th>
+                                <th>الحجم</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-file-archive me-2 text-primary"></i>
+                                    {{ backup.filename }}
+                                </td>
+                                <td>{{ backup.date.strftime('%Y/%m/%d %H:%M') }}</td>
+                                <td>{{ "%.1f"|format(backup.size / 1024 / 1024) }} MB</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary select-backup-btn" 
+                                            data-backup-path="{{ backup.filepath }}">
+                                        <i class="fas fa-check me-1"></i>
+                                        اختيار
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- شريط التقدم -->
+<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-cog fa-spin fa-3x text-primary"></i>
+                </div>
+                <h5>جاري استعادة النسخة الاحتياطية...</h5>
+                <p class="text-muted">يرجى الانتظار، قد تستغرق هذه العملية بضع دقائق</p>
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+                         role="progressbar" style="width: 100%"></div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        لا تغلق المتصفح أثناء عملية الاستعادة
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const backupFileSelect = document.getElementById('backup_file');
+    const confirmCheckbox = document.getElementById('confirm_restore');
+    const restoreBtn = document.getElementById('restoreBtn');
+    const selectBackupBtns = document.querySelectorAll('.select-backup-btn');
+    
+    // تفعيل/إلغاء تفعيل زر الاستعادة
+    function updateRestoreButton() {
+        const hasFile = backupFileSelect.value !== '';
+        const isConfirmed = confirmCheckbox.checked;
+        
+        restoreBtn.disabled = !(hasFile && isConfirmed);
+    }
+    
+    // مراقبة التغييرات
+    [backupFileSelect, confirmCheckbox].forEach(element => {
+        element.addEventListener('change', updateRestoreButton);
+    });
+    
+    // أزرار اختيار النسخة الاحتياطية
+    selectBackupBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const backupPath = this.getAttribute('data-backup-path');
+            backupFileSelect.value = backupPath;
+            updateRestoreButton();
+            
+            // تمييز الصف المحدد
+            document.querySelectorAll('tbody tr').forEach(row => {
+                row.classList.remove('table-primary');
+            });
+            this.closest('tr').classList.add('table-primary');
+        });
+    });
+    
+    // إظهار شريط التقدم عند الإرسال
+    form.addEventListener('submit', function(e) {
+        if (!confirm('هل أنت متأكد من استعادة هذه النسخة الاحتياطية؟ سيتم استبدال البيانات الحالية.')) {
+            e.preventDefault();
+            return;
+        }
+        
+        restoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الاستعادة...';
+        restoreBtn.disabled = true;
+        
+        const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+        modal.show();
+    });
+    
+    // تحديث أولي
+    updateRestoreButton();
+});
+</script>
+{% endblock %}

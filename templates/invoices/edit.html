@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل فاتورة {{ invoice.invoice_number }} - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('invoices_list') }}">الفواتير</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}">فاتورة {{ invoice.invoice_number }}</a></li>
+                <li class="breadcrumb-item active">تعديل</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    تعديل فاتورة {{ invoice.invoice_number }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- معلومات العميل -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user me-2"></i>
+                                معلومات العميل
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.customer_name.label(class="form-label required") }}
+                                        {{ form.customer_name(class="form-control form-control-lg") }}
+                                        {% if form.customer_name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.customer_name.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.customer_tax_id.label(class="form-label") }}
+                                        {{ form.customer_tax_id(class="form-control form-control-lg") }}
+                                        {% if form.customer_tax_id.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.customer_tax_id.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.customer_address.label(class="form-label") }}
+                                {{ form.customer_address(class="form-control", rows="3") }}
+                                {% if form.customer_address.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.customer_address.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تفاصيل الفاتورة -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calendar me-2"></i>
+                                تفاصيل الفاتورة
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">رقم الفاتورة</label>
+                                        <input type="text" class="form-control form-control-lg" 
+                                               value="{{ invoice.invoice_number }}" readonly>
+                                        <div class="form-text">
+                                            <small class="text-muted">لا يمكن تعديل رقم الفاتورة</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        {{ form.invoice_date.label(class="form-label required") }}
+                                        {{ form.invoice_date(class="form-control form-control-lg") }}
+                                        {% if form.invoice_date.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.invoice_date.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        {{ form.due_date.label(class="form-label") }}
+                                        {{ form.due_date(class="form-control form-control-lg") }}
+                                        {% if form.due_date.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.due_date.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.notes.label(class="form-label") }}
+                                {{ form.notes(class="form-control", rows="3") }}
+                                {% if form.notes.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.notes.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- إجماليات الفاتورة الحالية -->
+                    {% if invoice.items %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calculator me-2"></i>
+                                إجماليات الفاتورة الحالية
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">عدد المنتجات</h6>
+                                        <div class="fw-bold text-primary">{{ invoice.items|length }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">المبلغ قبل الضريبة</h6>
+                                        <div class="fw-bold">{{ "{:,.2f}".format(invoice.subtotal) }} جنيه</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">إجمالي الضرائب</h6>
+                                        <div class="fw-bold text-warning">{{ "{:,.2f}".format(invoice.vat_amount + invoice.withholding_amount) }} جنيه</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">المبلغ الإجمالي</h6>
+                                        <div class="fw-bold text-success">{{ "{:,.2f}".format(invoice.total_amount) }} جنيه</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            إلغاء
+                        </a>
+                        <div>
+                            <a href="{{ url_for('add_invoice_item', invoice_id=invoice.id) }}" class="btn btn-success me-2">
+                                <i class="fas fa-plus me-2"></i>
+                                إضافة منتج
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                حفظ التغييرات
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // التحقق من صحة النموذج
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+
+<style>
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.form-control-lg, .form-select-lg {
+    border-radius: 0.75rem;
+}
+
+.card {
+    border-radius: 1rem;
+}
+
+.border {
+    border-color: #dee2e6 !important;
+}
+</style>
+{% endblock %}

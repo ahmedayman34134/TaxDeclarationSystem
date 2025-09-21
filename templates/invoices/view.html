@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}فاتورة {{ invoice.invoice_number }} - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('invoices_list') }}">الفواتير</a></li>
+                <li class="breadcrumb-item active">فاتورة {{ invoice.invoice_number }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    فاتورة {{ invoice.invoice_number }}
+                </h4>
+                <div class="btn-group">
+                    {% if not invoice.is_cancelled and current_user.has_permission('edit_invoice') %}
+                    <a href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>تعديل
+                    </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-success" onclick="printInvoice()">
+                        <i class="fas fa-print me-2"></i>طباعة
+                    </button>
+                    {% if not invoice.is_cancelled and current_user.has_permission('delete_invoice') %}
+                    <button type="button" class="btn btn-danger" onclick="cancelInvoice()">
+                        <i class="fas fa-ban me-2"></i>إلغاء
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- معلومات الفاتورة -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">معلومات الفاتورة</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td><strong>رقم الفاتورة:</strong></td>
+                                        <td>{{ invoice.invoice_number }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>تاريخ الفاتورة:</strong></td>
+                                        <td>{{ invoice.invoice_date.strftime('%Y/%m/%d') }}</td>
+                                    </tr>
+                                    {% if invoice.due_date %}
+                                    <tr>
+                                        <td><strong>تاريخ الاستحقاق:</strong></td>
+                                        <td>{{ invoice.due_date.strftime('%Y/%m/%d') }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td><strong>الحالة:</strong></td>
+                                        <td>
+                                            {% if invoice.is_cancelled %}
+                                                <span class="badge bg-danger">ملغاة</span>
+                                            {% else %}
+                                                <span class="badge bg-success">نشطة</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">معلومات العميل</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td><strong>اسم العميل:</strong></td>
+                                        <td>{{ invoice.customer_name }}</td>
+                                    </tr>
+                                    {% if invoice.customer_tax_id %}
+                                    <tr>
+                                        <td><strong>الرقم الضريبي:</strong></td>
+                                        <td>{{ invoice.customer_tax_id }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if invoice.customer_address %}
+                                    <tr>
+                                        <td><strong>العنوان:</strong></td>
+                                        <td>{{ invoice.customer_address }}</td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- منتجات الفاتورة -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">منتجات الفاتورة</h6>
+                        {% if not invoice.is_cancelled and current_user.has_permission('edit_invoice') %}
+                        <a href="{{ url_for('add_invoice_item', invoice_id=invoice.id) }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i>إضافة منتج
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body p-0">
+                        {% if invoice.items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>المنتج</th>
+                                        <th>الكمية</th>
+                                        <th>سعر الوحدة</th>
+                                        <th>الخصم</th>
+                                        <th>المبلغ</th>
+                                        <th>نوع الضريبة</th>
+                                        <th>الضريبة</th>
+                                        <th>الإجمالي</th>
+                                        {% if not invoice.is_cancelled and current_user.has_permission('edit_invoice') %}
+                                        <th>الإجراءات</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in invoice.items %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item.product.name }}</strong>
+                                            {% if item.product.description %}
+                                            <br><small class="text-muted">{{ item.product.description[:50] }}{% if item.product.description|length > 50 %}...{% endif %}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>{{ "{:,.2f}".format(item.unit_price) }} جنيه</td>
+                                        <td>
+                                            {% if item.discount_percentage > 0 %}
+                                                {{ item.discount_percentage }}%
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ "{:,.2f}".format(item.get_line_total()) }} جنيه</td>
+                                        <td>
+                                            {% if item.product.tax_type.value == 'vat' %}
+                                                <span class="badge bg-primary">ق.م.م {{ item.product.tax_rate }}%</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">خ.إ {{ item.product.tax_rate }}%</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ "{:,.2f}".format(item.get_tax_amount()) }} جنيه</td>
+                                        <td><strong>{{ "{:,.2f}".format(item.get_line_total() + item.get_tax_amount()) }} جنيه</strong></td>
+                                        {% if not invoice.is_cancelled and current_user.has_permission('edit_invoice') %}
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-item-btn" 
+                                                    data-item-id="{{ item.id }}" data-product-name="{{ item.product.name }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-box fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد منتجات في هذه الفاتورة</p>
+                            {% if not invoice.is_cancelled and current_user.has_permission('edit_invoice') %}
+                            <a href="{{ url_for('add_invoice_item', invoice_id=invoice.id) }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>إضافة منتج
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- إجماليات الفاتورة -->
+                <div class="row">
+                    <div class="col-md-8">
+                        {% if invoice.notes %}
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">ملاحظات</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0">{{ invoice.notes }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">إجماليات الفاتورة</h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td>المبلغ قبل الضريبة:</td>
+                                        <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.subtotal) }} جنيه</strong></td>
+                                    </tr>
+                                    {% if invoice.vat_amount > 0 %}
+                                    <tr>
+                                        <td>ضريبة القيمة المضافة:</td>
+                                        <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.vat_amount) }} جنيه</strong></td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if invoice.withholding_amount > 0 %}
+                                    <tr>
+                                        <td>ضريبة الخصم والإضافة:</td>
+                                        <td class="text-end"><strong>{{ "{:,.2f}".format(invoice.withholding_amount) }} جنيه</strong></td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr class="border-top">
+                                        <td><strong>المبلغ الإجمالي:</strong></td>
+                                        <td class="text-end"><strong class="text-success fs-5">{{ "{:,.2f}".format(invoice.total_amount) }} جنيه</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نماذج التأكيد -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد إلغاء الفاتورة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من إلغاء الفاتورة "{{ invoice.invoice_number }}"؟</p>
+                <p class="text-danger small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    لا يمكن التراجع عن هذا الإجراء
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" action="{{ url_for('cancel_invoice', invoice_id=invoice.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-danger">إلغاء الفاتورة</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد حذف المنتج</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف المنتج "<span id="itemProductName"></span>" من الفاتورة؟</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" id="deleteItemForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// طباعة الفاتورة
+function printInvoice() {
+    window.print();
+}
+
+// إلغاء الفاتورة
+function cancelInvoice() {
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    modal.show();
+}
+
+// حذف منتج من الفاتورة
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.delete-item-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-item-id');
+            const productName = this.getAttribute('data-product-name');
+            
+            document.getElementById('itemProductName').textContent = productName;
+            document.getElementById('deleteItemForm').action = `/invoices/{{ invoice.id }}/items/${itemId}/delete`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('deleteItemModal'));
+            modal.show();
+        });
+    });
+});
+</script>
+
+<style>
+@media print {
+    .btn, .breadcrumb, .modal {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa !important;
+        color: #000 !important;
+    }
+}
+</style>
+{% endblock %}

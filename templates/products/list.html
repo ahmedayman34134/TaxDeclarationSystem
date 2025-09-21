@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block title %}قائمة المنتجات - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="gradient-text">
+                <i class="fas fa-box me-3"></i>
+                إدارة المنتجات
+            </h1>
+            {% if current_user.has_permission('create_product') %}
+            <a href="{{ url_for('create_product') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                إضافة منتج جديد
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- شريط البحث والفلاتر -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">البحث في المنتجات</label>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="ابحث بالاسم..." value="{{ search }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">نوع الضريبة</label>
+                        <select name="tax_type" class="form-select">
+                            <option value="">جميع الأنواع</option>
+                            <option value="vat" {{ 'selected' if tax_type == 'vat' }}>ضريبة القيمة المضافة</option>
+                            <option value="withholding" {{ 'selected' if tax_type == 'withholding' }}>ضريبة الخصم والإضافة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-search me-2"></i>بحث
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- قائمة المنتجات -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fas fa-list me-2"></i>
+                    قائمة المنتجات ({{ products.total }} منتج)
+                </span>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="gridView">
+                        <i class="fas fa-th"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm active" id="listView">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if products.items %}
+                <!-- عرض الجدول -->
+                <div id="tableView">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>اسم المنتج</th>
+                                    <th>السعر</th>
+                                    <th>نوع الضريبة</th>
+                                    <th>معدل الضريبة</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products.items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                <i class="fas fa-box text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ product.name }}</h6>
+                                                {% if product.description %}
+                                                <small class="text-muted">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-success">{{ "{:,.2f}".format(product.price) }} جنيه</span>
+                                    </td>
+                                    <td>
+                                        {% if product.tax_type.value == 'vat' %}
+                                            <span class="badge bg-primary">ضريبة القيمة المضافة</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">ضريبة الخصم والإضافة</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ product.tax_rate }}%</td>
+                                    <td>
+                                        {% if product.is_active %}
+                                            <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">غير نشط</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ product.created_at.strftime('%Y/%m/%d') }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            {% if current_user.has_permission('edit_product') %}
+                                            <a href="{{ url_for('edit_product', product_id=product.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                            {% if current_user.has_permission('delete_product') %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-product-btn" 
+                                                    data-product-id="{{ product.id }}" 
+                                                    data-product-name="{{ product.name }}" title="حذف">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- عرض البطاقات -->
+                <div id="cardView" style="display: none;">
+                    <div class="row p-3">
+                        {% for product in products.items %}
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                            <div class="card h-100 product-card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="avatar-lg bg-primary rounded-circle d-flex align-items-center justify-content-center">
+                                            <i class="fas fa-box fa-2x text-white"></i>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                    data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                {% if current_user.has_permission('edit_product') %}
+                                                <li><a class="dropdown-item" href="{{ url_for('edit_product', product_id=product.id) }}">
+                                                    <i class="fas fa-edit me-2"></i>تعديل
+                                                </a></li>
+                                                {% endif %}
+                                                {% if current_user.has_permission('delete_product') %}
+                                                <li><a class="dropdown-item text-danger delete-product-link" href="#" 
+                                                       data-product-id="{{ product.id }}" 
+                                                       data-product-name="{{ product.name }}">
+                                                    <i class="fas fa-trash me-2"></i>حذف
+                                                </a></li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <h5 class="card-title">{{ product.name }}</h5>
+                                    {% if product.description %}
+                                    <p class="card-text text-muted small">{{ product.description[:80] }}{% if product.description|length > 80 %}...{% endif %}</p>
+                                    {% endif %}
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <small class="text-muted">السعر</small>
+                                            <div class="fw-bold text-success">{{ "{:,.2f}".format(product.price) }} جنيه</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">معدل الضريبة</small>
+                                            <div class="fw-bold">{{ product.tax_rate }}%</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        {% if product.tax_type.value == 'vat' %}
+                                            <span class="badge bg-primary">ق.م.م</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">خ.إ</span>
+                                        {% endif %}
+                                        
+                                        {% if product.is_active %}
+                                            <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">غير نشط</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-box fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">لا توجد منتجات</h4>
+                    <p class="text-muted mb-4">لم يتم العثور على أي منتجات تطابق معايير البحث</p>
+                    {% if current_user.has_permission('create_product') %}
+                    <a href="{{ url_for('create_product') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>إضافة منتج جديد
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- التنقل بين الصفحات -->
+{% if products.pages > 1 %}
+<div class="row mt-4">
+    <div class="col-12">
+        <nav aria-label="تنقل الصفحات">
+            <ul class="pagination justify-content-center">
+                {% if products.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('products_list', page=products.prev_num, search=search, tax_type=tax_type) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in products.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != products.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('products_list', page=page_num, search=search, tax_type=tax_type) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if products.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('products_list', page=products.next_num, search=search, tax_type=tax_type) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+
+<!-- نموذج تأكيد الحذف -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف المنتج "<span id="productName"></span>"؟</p>
+                <p class="text-danger small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    لا يمكن التراجع عن هذا الإجراء
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" id="deleteForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تبديل العرض بين الجدول والبطاقات
+document.getElementById('gridView').addEventListener('click', function() {
+    document.getElementById('tableView').style.display = 'none';
+    document.getElementById('cardView').style.display = 'block';
+    this.classList.add('active');
+    document.getElementById('listView').classList.remove('active');
+});
+
+document.getElementById('listView').addEventListener('click', function() {
+    document.getElementById('tableView').style.display = 'block';
+    document.getElementById('cardView').style.display = 'none';
+    this.classList.add('active');
+    document.getElementById('gridView').classList.remove('active');
+});
+
+// حذف المنتج
+function deleteProduct(productId, productName) {
+    document.getElementById('productName').textContent = productName;
+    document.getElementById('deleteForm').action = `/products/${productId}/delete`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// إضافة event listeners للأزرار
+document.addEventListener('DOMContentLoaded', function() {
+    // أزرار الحذف في الجدول
+    document.querySelectorAll('.delete-product-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            const productName = this.getAttribute('data-product-name');
+            deleteProduct(productId, productName);
+        });
+    });
+    
+    // روابط الحذف في البطاقات
+    document.querySelectorAll('.delete-product-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.getAttribute('data-product-id');
+            const productName = this.getAttribute('data-product-name');
+            deleteProduct(productId, productName);
+        });
+    });
+});
+
+// البحث التلقائي
+let searchTimeout;
+document.querySelector('input[name="search"]').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        if (this.value.length >= 2 || this.value.length === 0) {
+            this.form.submit();
+        }
+    }, 500);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}الملخص الشهري - {{ month_name }} {{ year }} - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('reports.reports_dashboard') }}">التقارير</a></li>
+                <li class="breadcrumb-item active">الملخص الشهري - {{ month_name }} {{ year }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    الملخص الشهري - {{ month_name }} {{ year }}
+                </h4>
+                <div class="btn-group">
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print me-2"></i>طباعة
+                    </button>
+                    <button onclick="exportToPDF()" class="btn btn-danger">
+                        <i class="fas fa-file-pdf me-2"></i>تصدير PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- إحصائيات سريعة -->
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-3">
+                        <div class="stats-card">
+                            <div class="stats-icon">
+                                <i class="fas fa-file-invoice"></i>
+                            </div>
+                            <div class="stats-number">{{ total_invoices }}</div>
+                            <div class="stats-label">عدد الفواتير</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-3">
+                        <div class="stats-card success">
+                            <div class="stats-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <div class="stats-number">{{ "{:,.0f}".format(total_sales) }}</div>
+                            <div class="stats-label">المبيعات الصافية (جنيه)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-3">
+                        <div class="stats-card warning">
+                            <div class="stats-icon">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="stats-number">{{ "{:,.0f}".format(total_vat + total_withholding) }}</div>
+                            <div class="stats-label">إجمالي الضرائب (جنيه)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-3">
+                        <div class="stats-card info">
+                            <div class="stats-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="stats-number">{{ "{:,.0f}".format(total_revenue) }}</div>
+                            <div class="stats-label">الإيرادات الإجمالية (جنيه)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تفصيل الضرائب -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-percentage me-2"></i>
+                                    ضريبة القيمة المضافة
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <h4 class="text-primary">{{ "{:,.2f}".format(total_vat) }}</h4>
+                                        <p class="text-muted mb-0">مبلغ الضريبة</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 class="text-success">14%</h4>
+                                        <p class="text-muted mb-0">معدل الضريبة</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-cut me-2"></i>
+                                    ضريبة الخصم والإضافة
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <h4 class="text-warning">{{ "{:,.2f}".format(total_withholding) }}</h4>
+                                        <p class="text-muted mb-0">مبلغ الضريبة</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 class="text-success">5%</h4>
+                                        <p class="text-muted mb-0">معدل الضريبة</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- قائمة الفواتير -->
+                    <div class="col-xl-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-list me-2"></i>
+                                    فواتير الشهر ({{ total_invoices }} فاتورة)
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
+                                {% if monthly_invoices %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>رقم الفاتورة</th>
+                                                <th>التاريخ</th>
+                                                <th>العميل</th>
+                                                <th>المبلغ الصافي</th>
+                                                <th>الضرائب</th>
+                                                <th>الإجمالي</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for invoice in monthly_invoices %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="text-decoration-none">
+                                                        {{ invoice.invoice_number }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ invoice.invoice_date.strftime('%Y/%m/%d') }}</td>
+                                                <td>{{ invoice.customer_name }}</td>
+                                                <td>{{ "{:,.2f}".format(invoice.subtotal) }} جنيه</td>
+                                                <td>{{ "{:,.2f}".format(invoice.vat_amount + invoice.withholding_amount) }} جنيه</td>
+                                                <td><strong>{{ "{:,.2f}".format(invoice.total_amount) }} جنيه</strong></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot class="table-light">
+                                            <tr>
+                                                <th colspan="3">الإجماليات</th>
+                                                <th>{{ "{:,.2f}".format(total_sales) }} جنيه</th>
+                                                <th>{{ "{:,.2f}".format(total_vat + total_withholding) }} جنيه</th>
+                                                <th>{{ "{:,.2f}".format(total_revenue) }} جنيه</th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-file-invoice fa-4x text-muted mb-4"></i>
+                                    <h5 class="text-muted">لا توجد فواتير في هذا الشهر</h5>
+                                    <p class="text-muted">لم يتم إنشاء أي فواتير في {{ month_name }} {{ year }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- أفضل العملاء -->
+                    <div class="col-xl-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-users me-2"></i>
+                                    أفضل العملاء
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if top_customers %}
+                                <div class="list-group list-group-flush">
+                                    {% for customer, stats in top_customers %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ customer }}</h6>
+                                            <small class="text-muted">{{ stats.invoices_count }} فاتورة</small>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">
+                                            {{ "{:,.0f}".format(stats.total_amount) }} جنيه
+                                        </span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">لا توجد بيانات عملاء</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- ملاحة الأشهر -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar me-2"></i>
+                                    تصفح الأشهر
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        {% set prev_month = month - 1 if month > 1 else 12 %}
+                                        {% set prev_year = year if month > 1 else year - 1 %}
+                                        <a href="{{ url_for('reports.monthly_summary', month=prev_month, year=prev_year) }}" 
+                                           class="btn btn-outline-primary w-100">
+                                            <i class="fas fa-chevron-right me-2"></i>
+                                            الشهر السابق
+                                        </a>
+                                    </div>
+                                    <div class="col-6">
+                                        {% set next_month = month + 1 if month < 12 else 1 %}
+                                        {% set next_year = year if month < 12 else year + 1 %}
+                                        <a href="{{ url_for('reports.monthly_summary', month=next_month, year=next_year) }}" 
+                                           class="btn btn-outline-primary w-100">
+                                            الشهر التالي
+                                            <i class="fas fa-chevron-left ms-2"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportToPDF() {
+    alert('تصدير PDF قيد التطوير - سيتم إضافته قريباً');
+}
+
+// تحسين الطباعة
+window.addEventListener('beforeprint', function() {
+    document.querySelectorAll('.btn, .breadcrumb').forEach(el => {
+        el.style.display = 'none';
+    });
+});
+
+window.addEventListener('afterprint', function() {
+    document.querySelectorAll('.btn, .breadcrumb').forEach(el => {
+        el.style.display = '';
+    });
+});
+</script>
+
+<style>
+@media print {
+    .btn, .breadcrumb {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+}
+</style>
+{% endblock %}

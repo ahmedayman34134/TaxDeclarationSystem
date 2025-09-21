@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}إنشاء تقرير جديد - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('reports.reports_dashboard') }}">التقارير</a></li>
+                <li class="breadcrumb-item active">إنشاء تقرير جديد</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    إنشاء تقرير جديد
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- تقارير الضرائب -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-primary h-100">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-percentage me-2"></i>
+                                    تقارير الضرائب
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-3">
+                                    <a href="{{ url_for('reports.vat_report') }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-percentage me-2"></i>
+                                        تقرير ضريبة القيمة المضافة
+                                    </a>
+                                    <a href="{{ url_for('reports.withholding_report') }}" class="btn btn-outline-warning">
+                                        <i class="fas fa-cut me-2"></i>
+                                        تقرير ضريبة الخصم والإضافة
+                                    </a>
+                                    <a href="{{ url_for('reports.tax_declaration') }}" class="btn btn-outline-success">
+                                        <i class="fas fa-file-contract me-2"></i>
+                                        الإقرار الضريبي
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تقارير المبيعات -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-success h-100">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-chart-line me-2"></i>
+                                    تقارير المبيعات
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-3">
+                                    <a href="{{ url_for('reports.sales_report') }}" class="btn btn-outline-success">
+                                        <i class="fas fa-money-bill-wave me-2"></i>
+                                        تقرير المبيعات
+                                    </a>
+                                    <a href="{{ url_for('reports.comprehensive_report') }}" class="btn btn-outline-info">
+                                        <i class="fas fa-chart-pie me-2"></i>
+                                        التقرير الشامل
+                                    </a>
+                                    <a href="{{ url_for('reports.monthly_summary') }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-calendar-alt me-2"></i>
+                                        الملخص الشهري
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تقارير سنوية -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-warning h-100">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar me-2"></i>
+                                    التقارير السنوية
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-3">
+                                    <a href="{{ url_for('reports.yearly_summary') }}" class="btn btn-outline-warning">
+                                        <i class="fas fa-calendar me-2"></i>
+                                        الملخص السنوي
+                                    </a>
+                                    <a href="{{ url_for('reports.tax_declaration') }}" class="btn btn-outline-danger">
+                                        <i class="fas fa-file-contract me-2"></i>
+                                        إقرار ضريبي سنوي
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- أدوات إضافية -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-info h-100">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-tools me-2"></i>
+                                    أدوات إضافية
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-3">
+                                    <button class="btn btn-outline-info" onclick="generateCustomReport()">
+                                        <i class="fas fa-cog me-2"></i>
+                                        تقرير مخصص
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="exportAllReports()">
+                                        <i class="fas fa-download me-2"></i>
+                                        تصدير جميع التقارير
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- معلومات إضافية -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات مهمة
+                            </h6>
+                            <ul class="mb-0">
+                                <li>جميع التقارير تعتمد على البيانات المحفوظة في النظام</li>
+                                <li>يمكنك تصدير التقارير بصيغة PDF أو Excel</li>
+                                <li>التقارير الضريبية تتبع المعايير المحاسبية المصرية</li>
+                                <li>يتم تحديث البيانات تلقائياً عند إضافة فواتير جديدة</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function generateCustomReport() {
+    alert('ميزة التقرير المخصص قيد التطوير - سيتم إضافتها قريباً');
+}
+
+function exportAllReports() {
+    alert('ميزة تصدير جميع التقارير قيد التطوير - سيتم إضافتها قريباً');
+}
+
+// تأثيرات بصرية للبطاقات
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.animationDelay = (index * 0.1) + 's';
+        card.classList.add('fade-in');
+    });
+});
+</script>
+
+<style>
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.fade-in {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+{% endblock %}

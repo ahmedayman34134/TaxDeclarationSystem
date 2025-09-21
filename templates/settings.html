@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}إعدادات النظام - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="gradient-text mb-4">
+            <i class="fas fa-cog me-3"></i>
+            إعدادات النظام
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <form method="POST" class="needs-validation" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <!-- إعدادات الشركة -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building me-2"></i>
+                        معلومات الشركة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.company_name.label(class="form-label required") }}
+                                {{ form.company_name(class="form-control") }}
+                                {% if form.company_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.company_name.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.company_tax_id.label(class="form-label required") }}
+                                {{ form.company_tax_id(class="form-control") }}
+                                {% if form.company_tax_id.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.company_tax_id.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.company_address.label(class="form-label") }}
+                        {{ form.company_address(class="form-control", rows="3") }}
+                        {% if form.company_address.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.company_address.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.company_phone.label(class="form-label") }}
+                                {{ form.company_phone(class="form-control") }}
+                                {% if form.company_phone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.company_phone.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.company_email.label(class="form-label") }}
+                                {{ form.company_email(class="form-control") }}
+                                {% if form.company_email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.company_email.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- إعدادات الضرائب -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-percentage me-2"></i>
+                        إعدادات الضرائب
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.default_vat_rate.label(class="form-label required") }}
+                                <div class="input-group">
+                                    {{ form.default_vat_rate(class="form-control") }}
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                {% if form.default_vat_rate.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.default_vat_rate.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.default_withholding_rate.label(class="form-label required") }}
+                                <div class="input-group">
+                                    {{ form.default_withholding_rate(class="form-control") }}
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                {% if form.default_withholding_rate.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.default_withholding_rate.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- إعدادات الفواتير -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-invoice me-2"></i>
+                        إعدادات الفواتير
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.invoice_prefix.label(class="form-label") }}
+                                {{ form.invoice_prefix(class="form-control") }}
+                                {% if form.invoice_prefix.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.invoice_prefix.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <small class="text-muted">مثال: INV, FAT, BILL</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.invoice_start_number.label(class="form-label required") }}
+                                {{ form.invoice_start_number(class="form-control") }}
+                                {% if form.invoice_start_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.invoice_start_number.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <small class="text-muted">رقم البداية للفواتير الجديدة</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- إعدادات النسخ الاحتياطي -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        إعدادات النسخ الاحتياطي
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.auto_backup_enabled(class="form-check-input", role="switch") }}
+                                    {{ form.auto_backup_enabled.label(class="form-check-label") }}
+                                </div>
+                                <div class="form-text">
+                                    <small class="text-muted">تفعيل النسخ الاحتياطي التلقائي</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.backup_frequency.label(class="form-label") }}
+                                {{ form.backup_frequency(class="form-select") }}
+                                {% if form.backup_frequency.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.backup_frequency.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- أزرار الحفظ -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            حفظ الإعدادات
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // التحقق من صحة النموذج
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // تنسيق الأرقام
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    numberInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            const value = parseFloat(this.value);
+            if (!isNaN(value)) {
+                this.value = value.toFixed(2);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.form-control, .form-select {
+    border-radius: 0.5rem;
+}
+
+.card {
+    border-radius: 1rem;
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+}
+</style>
+{% endblock %}

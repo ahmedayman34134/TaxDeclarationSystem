@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة المستخدمين - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="gradient-text">
+                <i class="fas fa-users me-3"></i>
+                إدارة المستخدمين
+            </h1>
+            <a href="{{ url_for('auth.create_user') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                إضافة مستخدم جديد
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- قائمة المستخدمين -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list me-2"></i>
+                قائمة المستخدمين ({{ users.total }} مستخدم)
+            </div>
+            <div class="card-body p-0">
+                {% if users.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>المستخدم</th>
+                                <th>البريد الإلكتروني</th>
+                                <th>الدور</th>
+                                <th>الحالة</th>
+                                <th>آخر دخول</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ user.username }}</h6>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.role.value == 'admin' %}
+                                        <span class="badge bg-danger">مدير</span>
+                                    {% elif user.role.value == 'accountant' %}
+                                        <span class="badge bg-warning">محاسب</span>
+                                    {% else %}
+                                        <span class="badge bg-info">مستخدم</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">نشط</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">غير نشط</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.last_login %}
+                                        {{ user.last_login.strftime('%Y/%m/%d %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">لم يسجل دخول</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%Y/%m/%d') }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('auth.edit_user', user_id=user.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="تعديل">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if user.id != current_user.id %}
+                                        <button type="button" class="btn btn-sm btn-outline-warning toggle-status-btn" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-user-name="{{ user.username }}"
+                                                data-current-status="{{ user.is_active }}" title="تغيير الحالة">
+                                            {% if user.is_active %}
+                                                <i class="fas fa-ban"></i>
+                                            {% else %}
+                                                <i class="fas fa-check"></i>
+                                            {% endif %}
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info reset-password-btn" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-user-name="{{ user.username }}" title="إعادة تعيين كلمة المرور">
+                                            <i class="fas fa-key"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-user-btn" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-user-name="{{ user.username }}" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">لا يوجد مستخدمين</h4>
+                    <p class="text-muted mb-4">لم يتم إنشاء أي مستخدمين حتى الآن</p>
+                    <a href="{{ url_for('auth.create_user') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>إضافة مستخدم جديد
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- التنقل بين الصفحات -->
+{% if users.pages > 1 %}
+<div class="row mt-4">
+    <div class="col-12">
+        <nav aria-label="تنقل الصفحات">
+            <ul class="pagination justify-content-center">
+                {% if users.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('auth.users_list', page=users.prev_num) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in users.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != users.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('auth.users_list', page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if users.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('auth.users_list', page=users.next_num) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+
+<!-- نماذج التأكيد -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد حذف المستخدم</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف المستخدم "<span id="deleteUserName"></span>"؟</p>
+                <p class="text-danger small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    لا يمكن التراجع عن هذا الإجراء
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" id="deleteForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="toggleStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="toggleStatusTitle">تغيير حالة المستخدم</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="toggleStatusMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" id="toggleStatusForm" class="d-inline">
+                    <button type="submit" class="btn btn-warning" id="toggleStatusBtn">تأكيد</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إعادة تعيين كلمة المرور</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من إعادة تعيين كلمة مرور المستخدم "<span id="resetPasswordUserName"></span>"؟</p>
+                <p class="text-info small">
+                    <i class="fas fa-info-circle me-2"></i>
+                    سيتم إنشاء كلمة مرور مؤقتة جديدة
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" id="resetPasswordForm" class="d-inline">
+                    <button type="submit" class="btn btn-info">إعادة تعيين</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // حذف المستخدم
+    document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const userName = this.getAttribute('data-user-name');
+            
+            document.getElementById('deleteUserName').textContent = userName;
+            document.getElementById('deleteForm').action = `/auth/users/${userId}/delete`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        });
+    });
+    
+    // تغيير حالة المستخدم
+    document.querySelectorAll('.toggle-status-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const userName = this.getAttribute('data-user-name');
+            const currentStatus = this.getAttribute('data-current-status') === 'True';
+            
+            const action = currentStatus ? 'إلغاء تفعيل' : 'تفعيل';
+            const message = `هل أنت متأكد من ${action} المستخدم "${userName}"؟`;
+            
+            document.getElementById('toggleStatusTitle').textContent = `${action} المستخدم`;
+            document.getElementById('toggleStatusMessage').textContent = message;
+            document.getElementById('toggleStatusForm').action = `/auth/users/${userId}/toggle-status`;
+            document.getElementById('toggleStatusBtn').textContent = action;
+            
+            const modal = new bootstrap.Modal(document.getElementById('toggleStatusModal'));
+            modal.show();
+        });
+    });
+    
+    // إعادة تعيين كلمة المرور
+    document.querySelectorAll('.reset-password-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const userName = this.getAttribute('data-user-name');
+            
+            document.getElementById('resetPasswordUserName').textContent = userName;
+            document.getElementById('resetPasswordForm').action = `/auth/users/${userId}/reset-password`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+            modal.show();
+        });
+    });
+});
+</script>
+{% endblock %}

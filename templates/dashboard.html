@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة التحكم - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="gradient-text mb-4">
+            <i class="fas fa-tachometer-alt me-3"></i>
+            لوحة التحكم
+        </h1>
+    </div>
+</div>
+
+<!-- بطاقات الإحصائيات -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="stats-number">{{ today_invoices }}</div>
+            <div class="stats-label">فواتير اليوم</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card success">
+            <div class="stats-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="stats-number">{{ "{:,.0f}".format(today_sales) }}</div>
+            <div class="stats-label">مبيعات اليوم (جنيه)</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card warning">
+            <div class="stats-icon">
+                <i class="fas fa-calendar-month"></i>
+            </div>
+            <div class="stats-number">{{ month_invoices }}</div>
+            <div class="stats-label">فواتير الشهر</div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card danger">
+            <div class="stats-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stats-number">{{ "{:,.0f}".format(month_sales) }}</div>
+            <div class="stats-label">مبيعات الشهر (جنيه)</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- الرسم البياني للمبيعات -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-chart-area me-2"></i>
+                المبيعات اليومية - آخر 7 أيام
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="dailySalesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- توزيع الضرائب -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-2"></i>
+                توزيع الضرائب
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="taxChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- آخر الفواتير -->
+    <div class="col-xl-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fas fa-file-invoice me-2"></i>
+                    آخر الفواتير
+                </span>
+                {% if current_user.has_permission('view_invoice') %}
+                <a href="{{ url_for('invoices_list') }}" class="btn btn-sm btn-outline-primary">
+                    عرض الكل
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if recent_invoices %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>رقم الفاتورة</th>
+                                <th>العميل</th>
+                                <th>التاريخ</th>
+                                <th>المبلغ</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in recent_invoices %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="text-decoration-none">
+                                        {{ invoice.invoice_number }}
+                                    </a>
+                                </td>
+                                <td>{{ invoice.customer_name }}</td>
+                                <td>{{ invoice.invoice_date.strftime('%Y/%m/%d') }}</td>
+                                <td>{{ "{:,.2f}".format(invoice.total_amount) }} جنيه</td>
+                                <td>
+                                    {% if invoice.is_cancelled %}
+                                        <span class="badge badge-danger">ملغاة</span>
+                                    {% else %}
+                                        <span class="badge badge-success">نشطة</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">لا توجد فواتير حتى الآن</p>
+                    {% if current_user.has_permission('create_invoice') %}
+                    <a href="{{ url_for('create_invoice') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>إنشاء فاتورة جديدة
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- المنتجات الأكثر مبيعاً -->
+    <div class="col-xl-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-trophy me-2"></i>
+                المنتجات الأكثر مبيعاً
+            </div>
+            <div class="card-body">
+                {% if top_products %}
+                <div class="list-group list-group-flush">
+                    {% for product in top_products %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div>
+                            <h6 class="mb-1">{{ product.name }}</h6>
+                            <small class="text-muted">الكمية: {{ "{:,.1f}".format(product.total_quantity) }}</small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">
+                            {{ "{:,.0f}".format(product.total_amount) }} جنيه
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-box fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">لا توجد مبيعات هذا الشهر</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- إجراءات سريعة -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bolt me-2"></i>
+                إجراءات سريعة
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if current_user.has_permission('create_invoice') %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('create_invoice') }}" class="btn btn-primary w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fas fa-plus fa-2x mb-2"></i>
+                            <span>فاتورة جديدة</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if current_user.has_permission('create_product') %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('create_product') }}" class="btn btn-success w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fas fa-box fa-2x mb-2"></i>
+                            <span>منتج جديد</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if current_user.has_permission('view_reports') %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('reports.generate_report') }}" class="btn btn-warning w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                            <span>تقرير جديد</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if current_user.role.value == 'admin' %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('backup.create_backup') }}" class="btn btn-info w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="fas fa-database fa-2x mb-2"></i>
+                            <span>نسخة احتياطية</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // رسم بياني للمبيعات اليومية
+    const dailySalesCtx = document.getElementById('dailySalesChart').getContext('2d');
+    const dailySalesData = {{ daily_sales_data | tojson }};
+    const dailySalesLabels = {{ daily_sales_labels | tojson }};
+    
+    new Chart(dailySalesCtx, {
+        type: 'line',
+        data: {
+            labels: dailySalesLabels,
+            datasets: [{
+                label: 'المبيعات (جنيه)',
+                data: dailySalesData,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' جنيه';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // رسم بياني للضرائب
+    const taxCtx = document.getElementById('taxChart').getContext('2d');
+    const taxData = {{ tax_data | tojson }};
+    const taxLabels = {{ tax_labels | tojson }};
+    
+    new Chart(taxCtx, {
+        type: 'doughnut',
+        data: {
+            labels: taxLabels,
+            datasets: [{
+                data: taxData,
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed.toLocaleString() + ' جنيه';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.chart-container canvas {
+    max-height: 300px;
+}
+</style>
+{% endblock %}

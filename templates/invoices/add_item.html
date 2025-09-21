@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}إضافة منتج للفاتورة {{ invoice.invoice_number }} - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('invoices_list') }}">الفواتير</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}">فاتورة {{ invoice.invoice_number }}</a></li>
+                <li class="breadcrumb-item active">إضافة منتج</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>
+                    إضافة منتج للفاتورة {{ invoice.invoice_number }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- اختيار المنتج -->
+                    <div class="mb-4">
+                        {{ form.product_id.label(class="form-label required") }}
+                        {{ form.product_id(class="form-select form-select-lg", id="productSelect") }}
+                        {% if form.product_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.product_id.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <small class="text-muted">اختر المنتج المراد إضافته للفاتورة</small>
+                        </div>
+                    </div>
+
+                    <!-- تفاصيل المنتج -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                {{ form.quantity.label(class="form-label required") }}
+                                {{ form.quantity(class="form-control form-control-lg", id="quantityInput", min="0.001", step="0.001") }}
+                                {% if form.quantity.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.quantity.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                {{ form.unit_price.label(class="form-label required") }}
+                                <div class="input-group">
+                                    {{ form.unit_price(class="form-control form-control-lg", id="unitPriceInput", min="0", step="0.01") }}
+                                    <span class="input-group-text">جنيه</span>
+                                </div>
+                                {% if form.unit_price.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.unit_price.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                {{ form.discount_percentage.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.discount_percentage(class="form-control form-control-lg", id="discountInput", min="0", max="100", step="0.01") }}
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                {% if form.discount_percentage.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.discount_percentage.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- معاينة الحسابات -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calculator me-2"></i>
+                                معاينة الحسابات
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-2">
+                                    <small class="text-muted">المبلغ الأساسي</small>
+                                    <div class="fw-bold" id="baseAmount">0.00 جنيه</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">الخصم</small>
+                                    <div class="fw-bold text-warning" id="discountAmount">0.00 جنيه</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">المبلغ بعد الخصم</small>
+                                    <div class="fw-bold" id="afterDiscount">0.00 جنيه</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">نوع الضريبة</small>
+                                    <div class="fw-bold" id="taxType">-</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">مبلغ الضريبة</small>
+                                    <div class="fw-bold text-primary" id="taxAmount">0.00 جنيه</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">الإجمالي النهائي</small>
+                                    <div class="fw-bold text-success" id="finalTotal">0.00 جنيه</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- معلومات المنتج المحدد -->
+                    <div class="card mb-4" id="productInfo" style="display: none;">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات المنتج
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">اسم المنتج</small>
+                                    <div class="fw-bold" id="productName">-</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">السعر الافتراضي</small>
+                                    <div class="fw-bold" id="productPrice">-</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">معدل الضريبة</small>
+                                    <div class="fw-bold" id="productTaxRate">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            إضافة المنتج
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.getElementById('productSelect');
+    const quantityInput = document.getElementById('quantityInput');
+    const unitPriceInput = document.getElementById('unitPriceInput');
+    const discountInput = document.getElementById('discountInput');
+    const productInfo = document.getElementById('productInfo');
+    
+    let currentProduct = null;
+    
+    // تحديث معلومات المنتج عند الاختيار
+    productSelect.addEventListener('change', function() {
+        if (this.value) {
+            fetch(`/api/products/${this.value}`)
+                .then(response => response.json())
+                .then(data => {
+                    currentProduct = data;
+                    
+                    // تحديث السعر
+                    unitPriceInput.value = data.price;
+                    
+                    // إظهار معلومات المنتج
+                    document.getElementById('productName').textContent = data.name;
+                    document.getElementById('productPrice').textContent = data.price + ' جنيه';
+                    document.getElementById('productTaxRate').textContent = data.tax_rate + '%';
+                    
+                    productInfo.style.display = 'block';
+                    
+                    // تحديث الحسابات
+                    updateCalculations();
+                })
+                .catch(error => {
+                    console.error('خطأ في تحميل بيانات المنتج:', error);
+                    productInfo.style.display = 'none';
+                    currentProduct = null;
+                });
+        } else {
+            productInfo.style.display = 'none';
+            currentProduct = null;
+            updateCalculations();
+        }
+    });
+    
+    // تحديث الحسابات عند تغيير القيم
+    [quantityInput, unitPriceInput, discountInput].forEach(input => {
+        input.addEventListener('input', updateCalculations);
+    });
+    
+    function updateCalculations() {
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const unitPrice = parseFloat(unitPriceInput.value) || 0;
+        const discountPercentage = parseFloat(discountInput.value) || 0;
+        
+        // الحسابات الأساسية
+        const baseAmount = quantity * unitPrice;
+        const discountAmount = baseAmount * (discountPercentage / 100);
+        const afterDiscount = baseAmount - discountAmount;
+        
+        // حساب الضريبة
+        let taxAmount = 0;
+        let taxType = '-';
+        
+        if (currentProduct && afterDiscount > 0) {
+            taxAmount = afterDiscount * (currentProduct.tax_rate / 100);
+            taxType = currentProduct.tax_type === 'vat' ? 
+                `ق.م.م ${currentProduct.tax_rate}%` : 
+                `خ.إ ${currentProduct.tax_rate}%`;
+        }
+        
+        const finalTotal = afterDiscount + taxAmount;
+        
+        // تحديث العرض
+        document.getElementById('baseAmount').textContent = baseAmount.toFixed(2) + ' جنيه';
+        document.getElementById('discountAmount').textContent = discountAmount.toFixed(2) + ' جنيه';
+        document.getElementById('afterDiscount').textContent = afterDiscount.toFixed(2) + ' جنيه';
+        document.getElementById('taxType').textContent = taxType;
+        document.getElementById('taxAmount').textContent = taxAmount.toFixed(2) + ' جنيه';
+        document.getElementById('finalTotal').textContent = finalTotal.toFixed(2) + ' جنيه';
+    }
+    
+    // التحقق من صحة النموذج
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // تحديث أولي
+    updateCalculations();
+});
+</script>
+
+<style>
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.form-control-lg, .form-select-lg {
+    border-radius: 0.75rem;
+}
+
+.card {
+    border-radius: 1rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - نظام إدارة الإقرارات الضريبية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('invoices_list') }}">الفواتير</a></li>
+                <li class="breadcrumb-item active">{{ title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    {{ title }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="needs-validation" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- معلومات العميل -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user me-2"></i>
+                                معلومات العميل
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.customer_name.label(class="form-label required") }}
+                                        {{ form.customer_name(class="form-control form-control-lg", placeholder="أدخل اسم العميل") }}
+                                        {% if form.customer_name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.customer_name.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.customer_tax_id.label(class="form-label") }}
+                                        {{ form.customer_tax_id(class="form-control form-control-lg", placeholder="الرقم الضريبي (اختياري)") }}
+                                        {% if form.customer_tax_id.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.customer_tax_id.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.customer_address.label(class="form-label") }}
+                                {{ form.customer_address(class="form-control", rows="3", placeholder="عنوان العميل (اختياري)") }}
+                                {% if form.customer_address.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.customer_address.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تفاصيل الفاتورة -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calendar me-2"></i>
+                                تفاصيل الفاتورة
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.invoice_date.label(class="form-label required") }}
+                                        {{ form.invoice_date(class="form-control form-control-lg") }}
+                                        {% if form.invoice_date.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.invoice_date.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.due_date.label(class="form-label") }}
+                                        {{ form.due_date(class="form-control form-control-lg") }}
+                                        {% if form.due_date.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.due_date.errors %}
+                                                    <div>{{ error }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.notes.label(class="form-label") }}
+                                {{ form.notes(class="form-control", rows="3", placeholder="ملاحظات إضافية (اختياري)") }}
+                                {% if form.notes.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.notes.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- معاينة الفاتورة -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-eye me-2"></i>
+                                معاينة الفاتورة
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">رقم الفاتورة</h6>
+                                        <div class="fw-bold text-primary" id="previewInvoiceNumber">
+                                            سيتم إنشاؤه تلقائياً
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">تاريخ الفاتورة</h6>
+                                        <div class="fw-bold" id="previewInvoiceDate">
+                                            {{ form.invoice_date.data or 'غير محدد' }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">العميل</h6>
+                                        <div class="fw-bold" id="previewCustomerName">
+                                            غير محدد
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="text-muted mb-1">الحالة</h6>
+                                        <div class="fw-bold text-success">
+                                            <i class="fas fa-plus-circle me-1"></i>
+                                            جديدة
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ملاحظة مهمة -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>
+                            ملاحظة مهمة
+                        </h6>
+                        <p class="mb-0">
+                            بعد إنشاء الفاتورة، ستتمكن من إضافة المنتجات وحساب الضرائب تلقائياً.
+                            سيتم إنشاء رقم الفاتورة تلقائياً عند الحفظ.
+                        </p>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('invoices_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {{ 'تحديث الفاتورة' if invoice else 'إنشاء الفاتورة' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const customerNameInput = document.getElementById('customer_name');
+    const invoiceDateInput = document.getElementById('invoice_date');
+    
+    // تحديث المعاينة
+    function updatePreview() {
+        // تحديث اسم العميل
+        const customerName = customerNameInput.value || 'غير محدد';
+        document.getElementById('previewCustomerName').textContent = customerName;
+        
+        // تحديث تاريخ الفاتورة
+        const invoiceDate = invoiceDateInput.value || 'غير محدد';
+        document.getElementById('previewInvoiceDate').textContent = invoiceDate;
+    }
+    
+    // مراقبة التغييرات
+    [customerNameInput, invoiceDateInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', updatePreview);
+            input.addEventListener('change', updatePreview);
+        }
+    });
+    
+    // تحديث أولي
+    updatePreview();
+    
+    // التحقق من صحة النموذج
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // تعيين تاريخ اليوم كافتراضي
+    if (invoiceDateInput && !invoiceDateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        invoiceDateInput.value = today;
+        updatePreview();
+    }
+});
+</script>
+
+<style>
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.form-control-lg, .form-select-lg {
+    border-radius: 0.75rem;
+}
+
+.card {
+    border-radius: 1rem;
+}
+
+.border {
+    border-color: #dee2e6 !important;
+}
+
+.preview-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px dashed #dee2e6;
+}
+</style>
+{% endblock %}
